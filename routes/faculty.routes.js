@@ -1,11 +1,16 @@
 const express = require('express');
+const router = express.Router();
 const bcrypt = require('bcrypt');
 const Faculty = require('../models/faculty.models')
 const Organization = require('../models/organisation.models');
 const verifyAdmin = require('./test.routes');
-const jwt = require('jsonwebtoken')
-const router = express.Router();
+const jwt = require('jsonwebtoken');
 const verifyFacultyToken = require('./facutly.middleware')
+const Quiz = require('../models/quiz.models'); // Adjust the path as necessary
+const MCQQuestion = require('../models/questions.models'); // Adjust the path as necessary
+
+
+
 
 router.post('/register-faculty', verifyAdmin, async (req, res) => {
     const { regId, name, email, password, organizationId } = req.body;
@@ -82,7 +87,7 @@ router.post('/faculty-login', async (req, res) => {
         }
 
         // Generate JWT token
-        const token = jwt.sign({ facultyId: faculty._id, regId: faculty.regId }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        const token = jwt.sign({ facultyId: faculty._id, regId: faculty.regId }, process.env.JWT_SECRET, { expiresIn: '10h' });
 
         return res.status(200).json({
             message: 'Login successful',
@@ -136,4 +141,69 @@ router.get('/get-classes', verifyFacultyToken, async (req, res) => {
 });
 
 
+
+
+
+router.post('/create-quiz', verifyAdmin, verifyFacultyToken, async (req, res) => {
+    const { title, class: classId, startTime, endTime, scheduledDate, questions } = req.body;
+
+    // Validate the input
+    if (!title || !classId || !startTime || !endTime || !scheduledDate || !Array.isArray(questions) || questions.length === 0) {
+        return res.status(400).json({ message: 'Please provide all required fields and ensure questions are in the correct format.' });
+    }
+
+    try {
+        // Get the faculty ID from the middleware
+        const faculty = req.faculty.facultyId; // Assuming `facultyId` is a field in the decoded token
+
+        // Create a new quiz instance
+        const quiz = new Quiz({
+            title,
+            faculty, // Use the faculty ID from the middleware
+            class: classId,
+            startTime,
+            endTime,
+            scheduledDate,
+        });
+
+        // Save the quiz to the database to get its ID
+        await quiz.save();
+
+        // Create and save the questions to the database with the quiz ID
+        const questionIds = await Promise.all(questions.map(async (questionData) => {
+            const question = new MCQQuestion({
+                questionText: questionData.question, // Assign question text
+                options: {
+                    opt1: questionData.opt1,
+                    opt2: questionData.opt2,
+                    opt3: questionData.opt3,
+                    opt4: questionData.opt4,
+                },
+                correctAnswer: questionData.correctAnswer,
+                quiz: quiz._id, // Assign the quiz ID to the question
+            });
+            await question.save();
+            return question._id;
+        }));
+
+        // Update quiz questions field
+        quiz.questions = questionIds;
+        await quiz.save();
+
+        // Push the quiz ID to the faculty's quizzes array
+        await Faculty.findByIdAndUpdate(faculty, { $push: { quizzes: quiz._id } });
+
+        return res.status(201).json({ message: 'Quiz created successfully!', quizId: quiz._id }); // Use quiz._id instead of quiz.quizId
+    } catch (error) {
+        console.error('Error creating quiz:', error);
+        return res.status(500).json({ message: 'An error occurred while creating the quiz.' });
+    }
+});
+
 module.exports = router;
+
+
+
+
+
+

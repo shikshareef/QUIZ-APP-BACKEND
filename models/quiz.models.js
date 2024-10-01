@@ -1,15 +1,17 @@
 const mongoose = require('mongoose');
-const {generateCustomId}  = require('./helper');
+const { generateCustomId } = require('./helper');
 
 const quizSchema = new mongoose.Schema({
   quizId: { type: String, unique: true },
   title: { type: String, required: true },
   faculty: { type: mongoose.Schema.Types.ObjectId, ref: 'Faculty', required: true },
   class: { type: mongoose.Schema.Types.ObjectId, ref: 'Class', required: true },
-  questions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Question' }],
+  questions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'MCQQuestion' }], // Make sure to reference the correct question model
   startTime: { type: Date, required: true },
   endTime: { type: Date, required: true },
-  active: { type: Boolean, default: true }  // Active state, default is true
+  scheduledDate: { type: Date, required: true },  // New field for scheduling the quiz
+  active: { type: Boolean, default: true },  // Active state, default is true
+  studentParticipants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Student' }] // Reference to Student model
 }, { timestamps: true });
 
 // Pre-save hook to generate quizId
