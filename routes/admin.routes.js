@@ -181,7 +181,7 @@ router.get('/organizations', verifyAdmin, async (req, res) => {
     }
 });
 
-router.get('/organization/classes', verifyAdmin, async (req, res) => {
+router.post('/organization/classes', verifyAdmin, async (req, res) => {
     const { organizationId } = req.body; // Get the organizationId from the request body
 
     // Validate the input
@@ -210,6 +210,47 @@ router.get('/organization/classes', verifyAdmin, async (req, res) => {
         return res.status(500).json({ message: 'Server error, please try again later' });
     }
 });
+
+router.delete('/delete/organization', verifyAdmin, async (req, res) => {
+    const { organizationId } = req.body; // Get the organization ID from the request body
+
+    // Validate the input
+    if (!organizationId) {
+        return res.status(400).json({ message: 'Organization ID is required' });
+    }
+
+    try {
+        // Find the admin by MongoDB ObjectId (from verifyAdmin middleware)
+        const admin = await Admin.findById(req.adminMongoId);
+
+        // Check if admin exists
+        if (!admin) {
+            return res.status(404).json({ message: 'Admin not found' });
+        }
+
+        // Check if the organization is in the admin's organization list
+        const organizationIndex = admin.organizations.indexOf(organizationId);
+
+        if (organizationIndex === -1) {
+            return res.status(404).json({ message: 'Organization not found in the admin\'s account' });
+        }
+
+        // Remove the organization from the admin's organizations array
+        admin.organizations.splice(organizationIndex, 1);
+        await admin.save();
+
+        // Optionally, delete the organization itself from the Organization collection
+        await Organization.findByIdAndDelete(organizationId);
+
+        return res.status(200).json({
+            message: 'Organization deleted successfully from the admin',
+        });
+    } catch (error) {
+        console.error('Error deleting organization:', error);
+        return res.status(500).json({ message: 'Server error, please try again later' });
+    }
+});
+
 
 
 
