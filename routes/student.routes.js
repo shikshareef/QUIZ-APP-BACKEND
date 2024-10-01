@@ -58,7 +58,7 @@ router.post('/register-student', verifyAdmin, async (req, res) => {
 });
 
 
-router.get('/organization/get-all', verifyAdmin ,  async (req, res) => {
+router.post('/organization/get-all', verifyAdmin ,  async (req, res) => {
     const { organizationId } = req.body; // Get organizationId from the request body
 
     // Validate input
@@ -137,7 +137,7 @@ router.put('/add-student-to-class', verifyAdmin, async (req, res) => {
     }
 });
 
-router.get('/class-students', verifyAdmin, async (req, res) => {
+router.post('/class-students', verifyAdmin, async (req, res) => {
     const { classId } = req.body; // Get the classId from the request body
 
     // Validate input
@@ -164,6 +164,48 @@ router.get('/class-students', verifyAdmin, async (req, res) => {
         return res.status(500).json({ message: 'Server error, please try again later' });
     }
 });
+
+router.put('/remove-student-from-class', verifyAdmin, async (req, res) => {
+    const { classId, studentId } = req.body; // Get the classId and studentId from the request body
+
+    // Validate input
+    if (!classId || !studentId) {
+        return res.status(400).json({ message: 'classId and studentId are required' });
+    }
+
+    try {
+        // Find the class by its MongoDB ObjectId
+        const classObj = await Class.findById(classId);
+        if (!classObj) {
+            return res.status(404).json({ message: 'Class not found' });
+        }
+
+        // Find the student by its MongoDB ObjectId
+        const student = await Student.findById(studentId);
+        if (!student) {
+            return res.status(404).json({ message: 'Student not found' });
+        }
+
+        // Remove the student from the class's students array
+        classObj.students.pull(studentId); // Using pull to remove studentId
+
+        // Remove the class from the student's classes array
+        student.classes.pull(classId); // Using pull to remove classId
+
+        // Save both student and class after modification
+        await Promise.all([classObj.save(), student.save()]);
+
+        return res.status(200).json({
+            message: `Student with ID ${studentId} successfully removed from class ${classObj.name}.`,
+            student,
+            class: classObj,
+        });
+    } catch (error) {
+        console.error('Error removing student from class:', error);
+        return res.status(500).json({ message: 'Server error, please try again later' });
+    }
+});
+
 
 
 
