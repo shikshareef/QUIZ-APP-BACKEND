@@ -5,6 +5,7 @@ const Organization = require('../models/organisation.models');
 const verifyAdmin = require('./test.routes');
 const jwt = require('jsonwebtoken')
 const router = express.Router();
+const verifyFacultyToken = require('./facutly.middleware')
 
 router.post('/register-faculty', verifyAdmin, async (req, res) => {
     const { regId, name, email, password, organizationId } = req.body;
@@ -98,6 +99,39 @@ router.post('/faculty-login', async (req, res) => {
     } catch (error) {
         console.error('Error logging in faculty:', error);
         return res.status(500).json({ message: 'Server error, please try again later' });
+    }
+});
+
+router.get('/get-classes', verifyFacultyToken, async (req, res) => {
+    try {
+        // The faculty ID is stored in the req.faculty object by the middleware
+        const facultyId = req.faculty.facultyId; // Assuming facultyId is stored in the token payload
+
+        // Find the faculty and populate the organization and its classes
+        const faculty = await Faculty.findById(facultyId).populate({
+            path: 'organization',
+            populate: {
+                path: 'classes', // Populate the classes associated with the organization
+            },
+        });
+
+        if (!faculty) {
+            return res.status(404).json({ message: 'Faculty not found' });
+        }
+
+        const organizationClasses = faculty.organization?.classes || []; // Get classes, default to an empty array
+
+        if (organizationClasses.length === 0) {
+            return res.status(404).json({ message: 'No classes found for this faculty\'s organization' });
+        }
+
+        return res.status(200).json({
+            message: 'Classes fetched successfully',
+            classes: organizationClasses,
+        });
+    } catch (error) {
+        console.error('Error fetching classes:', error);
+        return res.status(500).json({ message: 'Server error' });
     }
 });
 
