@@ -161,4 +161,24 @@ router.put('/add-student-to-class', verifyAdmin, async (req, res) => {
     }
 });
 
+router.get('/organizations', verifyAdmin, async (req, res) => {
+    try {
+        // Find the admin by the MongoDB ID stored in the request
+        const admin = await Admin.findById(req.adminMongoId).populate('organizations');
+        
+        if (!admin) {
+            return res.status(404).json({ message: 'Admin not found' });
+        }
+
+        return res.status(200).json({
+            message: 'Organizations retrieved successfully',
+            organizations: admin.organizations,
+        });
+    } catch (error) {
+        console.error('Error retrieving organizations:', error);
+        return res.status(500).json({ message: 'Server error, please try again later' });
+    }
+});
+
+
 module.exports = router;
