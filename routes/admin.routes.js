@@ -251,6 +251,47 @@ router.delete('/delete/organization', verifyAdmin, async (req, res) => {
     }
 });
 
+router.delete('/delete/class', verifyAdmin, async (req, res) => {
+    const { organizationId, classId } = req.body; // Get the organizationId and classId from the request body
+
+    // Validate the input
+    if (!organizationId || !classId) {
+        return res.status(400).json({ message: 'Both organization ID and class ID are required' });
+    }
+
+    try {
+        // Find the organization by MongoDB ObjectId
+        const organization = await Organization.findById(organizationId);
+
+        // Check if organization exists
+        if (!organization) {
+            return res.status(404).json({ message: 'Organization not found' });
+        }
+
+        // Check if the class exists in the organization's classes array
+        const classIndex = organization.classes.indexOf(classId);
+
+        if (classIndex === -1) {
+            return res.status(404).json({ message: 'Class not found in the organization' });
+        }
+
+        // Remove the class from the organization's classes array
+        organization.classes.splice(classIndex, 1);
+        await organization.save(); // Save the updated organization
+
+        // Optionally, delete the class itself from the Class collection
+        await Class.findByIdAndDelete(classId);
+
+        return res.status(200).json({
+            message: 'Class deleted successfully from the organization',
+        });
+    } catch (error) {
+        console.error('Error deleting class:', error);
+        return res.status(500).json({ message: 'Server error, please try again later' });
+    }
+});
+
+
 
 
 
