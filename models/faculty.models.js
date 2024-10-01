@@ -4,6 +4,7 @@ const {generateCustomId}  = require('./helper');
 const facultySchema = new mongoose.Schema({
   facultyId: { type: String, unique: true },
   name: { type: String, required: true },
+  regId : {type : String , required: true},
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   organization: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization', required: true },
