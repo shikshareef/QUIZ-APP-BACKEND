@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt');
 const Faculty = require('../models/faculty.models')
 const Organization = require('../models/organisation.models');
 const verifyAdmin = require('./test.routes');
-
+const jwt = require('jsonwebtoken')
 const router = express.Router();
 
 router.post('/register-faculty', verifyAdmin, async (req, res) => {
@@ -55,6 +55,48 @@ if (!organization.faculties.includes(newFaculty._id)) {
         });
     } catch (error) {
         console.error('Error registering faculty:', error);
+        return res.status(500).json({ message: 'Server error, please try again later' });
+    }
+});
+
+router.post('/faculty-login', async (req, res) => {
+    const { regId, password } = req.body;
+
+    // Validate input
+    if (!regId || !password) {
+        return res.status(400).json({ message: 'regId and password are required' });
+    }
+
+    try {
+        // Find the faculty by regId
+        const faculty = await Faculty.findOne({ regId });
+        if (!faculty) {
+            return res.status(404).json({ message: 'Faculty not found' });
+        }
+
+        // Check if the password matches
+        const isPasswordValid = await bcrypt.compare(password, faculty.password);
+        if (!isPasswordValid) {
+            return res.status(401).json({ message: 'Invalid password' });
+        }
+
+        // Generate JWT token
+        const token = jwt.sign({ facultyId: faculty._id, regId: faculty.regId }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+        return res.status(200).json({
+            message: 'Login successful',
+            token, // Return the token
+            faculty: {
+                facultyId: faculty._id,
+                name: faculty.name,
+                email: faculty.email,
+                regId: faculty.regId,
+                organization: faculty.organization,
+                role: faculty.role
+            }
+        });
+    } catch (error) {
+        console.error('Error logging in faculty:', error);
         return res.status(500).json({ message: 'Server error, please try again later' });
     }
 });
