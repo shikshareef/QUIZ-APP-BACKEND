@@ -181,5 +181,36 @@ router.get('/organizations', verifyAdmin, async (req, res) => {
     }
 });
 
+router.get('/organization/classes', verifyAdmin, async (req, res) => {
+    const { organizationId } = req.body; // Get the organizationId from the request body
+
+    // Validate the input
+    if (!organizationId) {
+        return res.status(400).json({ message: 'Organization ID is required' });
+    }
+
+    try {
+        // Find the organization by its MongoDB ObjectId
+        const organization = await Organization.findById(organizationId); // Use findById for faster lookup
+
+        // Check if organization exists
+        if (!organization) {
+            return res.status(404).json({ message: 'Organization not found' });
+        }
+
+        // Find all classes associated with the organization
+        const classes = await Class.find({ organization: organization._id }); // Assuming organization is referenced in Class schema
+
+        return res.status(200).json({
+            message: 'Classes retrieved successfully',
+            classes,
+        });
+    } catch (error) {
+        console.error('Error retrieving classes:', error);
+        return res.status(500).json({ message: 'Server error, please try again later' });
+    }
+});
+
+
 
 module.exports = router;
