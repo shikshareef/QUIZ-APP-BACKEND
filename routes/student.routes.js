@@ -4,6 +4,7 @@ const Student = require('../models/students.models')
 const bcrypt = require('bcrypt'); // Import bcrypt for password hashing
 const verifyAdmin = require('./test.routes');
 const Organization =  require('../models/organisation.models')
+const Class = require('../models/classes.models')
 
 // API to create a new student
 router.post('/register-student', verifyAdmin, async (req, res) => {
@@ -89,6 +90,82 @@ router.get('/organization/get-all', verifyAdmin ,  async (req, res) => {
         return res.status(500).json({ message: 'Server error, please try again later' });
     }
 });
+
+router.put('/add-student-to-class', verifyAdmin, async (req, res) => {
+    const { studentId, classId } = req.body; // Extract studentId and classId from the request body
+
+    // Validate input
+    if (!studentId || !classId) {
+        return res.status(400).json({ message: 'studentId and classId are required' });
+    }
+
+    try {
+        // Find the student by studentId
+        const student = await Student.findById(studentId);
+        if (!student) {
+            return res.status(404).json({ message: 'Student not found' });
+        }
+
+        // Find the class by classId
+        const classObj = await Class.findById(classId);
+        if (!classObj) {
+            return res.status(404).json({ message: 'Class not found' });
+        }
+
+        // Check if the student is already in the class
+        if (!classObj.students.includes(student._id)) {
+            classObj.students.push(student._id); // Add student ID to class's students array
+        }
+
+        // Add the class reference to the student's classes array if not already present
+        if (!student.classes.includes(classObj._id)) {
+            student.classes.push(classObj._id); // Add class ID to student's classes array
+        }
+
+        // Save both student and class
+        await student.save();
+        await classObj.save();
+
+        return res.status(200).json({
+            message: `Student with ID ${studentId} added to class ${classObj.name} successfully.`,
+            student,
+            class: classObj,
+        });
+    } catch (error) {
+        console.error('Error adding student to class:', error);
+        return res.status(500).json({ message: 'Server error, please try again later' });
+    }
+});
+
+router.get('/class-students', verifyAdmin, async (req, res) => {
+    const { classId } = req.body; // Get the classId from the request body
+
+    // Validate input
+    if (!classId) {
+        return res.status(400).json({ message: 'classId is required' });
+    }
+
+    try {
+        // Find the class by its MongoDB ObjectId
+        const classObj = await Class.findById(classId).populate('students'); // Populate students array with student details
+
+        // Check if class exists
+        if (!classObj) {
+            return res.status(404).json({ message: 'Class not found' });
+        }
+
+        // Return the list of students in the class
+        return res.status(200).json({
+            message: `Students in class ${classObj.name} retrieved successfully`,
+            students: classObj.students, // Returning populated students
+        });
+    } catch (error) {
+        console.error('Error retrieving students for class:', error);
+        return res.status(500).json({ message: 'Server error, please try again later' });
+    }
+});
+
+
 
 
 module.exports = router;

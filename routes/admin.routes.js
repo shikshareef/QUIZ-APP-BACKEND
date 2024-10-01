@@ -116,51 +116,7 @@ router.post('/create-class', verifyAdmin, async (req, res) => {
 
 
 
-router.put('/add-student-to-class', verifyAdmin, async (req, res) => {
-    const { regNo, classId } = req.body; // Extract regNo and classId from the request body
 
-    // Validate input
-    if (!regNo || !classId) {
-        return res.status(400).json({ message: 'regNo and classId are required' });
-    }
-
-    try {
-        // Find the student by regNo
-        const student = await Student.findOne({ regNo });
-        if (!student) {
-            return res.status(404).json({ message: 'Student not found' });
-        }
-
-        // Find the class by classId
-        const classObj = await Class.findById(classId);
-        if (!classObj) {
-            return res.status(404).json({ message: 'Class not found' });
-        }
-
-        // Check if the student is already in the class
-        if (!classObj.students.includes(student._id)) {
-            classObj.students.push(student._id); // Add student ID to class's students array
-        }
-
-        // Add the class reference to the student's classes array if not already present
-        if (!student.classes.includes(classObj._id)) {
-            student.classes.push(classObj._id); // Add class ID to student's classes array
-        }
-
-        // Save both student and class
-        await student.save();
-        await classObj.save();
-
-        return res.status(200).json({
-            message: `Student with regNo ${regNo} added to class ${classObj.name} successfully.`,
-            student,
-            class: classObj,
-        });
-    } catch (error) {
-        console.error('Error adding student to class:', error);
-        return res.status(500).json({ message: 'Server error, please try again later' });
-    }
-});
 
 router.get('/organizations', verifyAdmin, async (req, res) => {
     try {
