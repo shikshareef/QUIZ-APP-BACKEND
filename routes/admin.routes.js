@@ -83,8 +83,8 @@ router.post('/create-class', verifyAdmin, async (req, res) => {
     }
 
     try {
-        // Find the organization by organizationId (not by _id)
-        const organization = await Organization.findOne({ organizationId }); // Change this line
+        // Find the organization by its MongoDB ObjectId
+        const organization = await Organization.findById(organizationId); // Use findById for faster lookup
 
         // Check if organization exists
         if (!organization) {
@@ -113,6 +113,7 @@ router.post('/create-class', verifyAdmin, async (req, res) => {
         return res.status(500).json({ message: 'Server error, please try again later' });
     }
 });
+
 
 
 router.put('/add-student-to-class', verifyAdmin, async (req, res) => {
