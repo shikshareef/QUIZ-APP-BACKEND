@@ -7,7 +7,8 @@ const studentSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  classes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Class' }], // Changed to array for multiple classes
+  classes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Class' }], // Array for multiple class references
+  organization: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization', required: true }, // Reference to the organization
   quizzesTaken: [{ 
     quiz: { type: mongoose.Schema.Types.ObjectId, ref: 'Quiz' },
     score: Number
