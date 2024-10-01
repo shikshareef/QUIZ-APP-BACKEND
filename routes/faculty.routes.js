@@ -43,9 +43,11 @@ router.post('/register-faculty', verifyAdmin, async (req, res) => {
         await newFaculty.save();
 
         // Add faculty reference to the organization
-        organization.faculty = organization.faculty || [];
-        organization.faculty.push(newFaculty._id);
-        await organization.save();
+if (!organization.faculties.includes(newFaculty._id)) {
+    organization.faculties.push(newFaculty._id);
+    await organization.save();
+}
+
 
         return res.status(201).json({
             message: 'Faculty registered successfully',
