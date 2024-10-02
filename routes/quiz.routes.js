@@ -42,6 +42,60 @@ router.post('/quiz-details', verifyStudentToken, async (req, res) => {
       return res.status(500).json({ message: 'An error occurred while fetching quiz details.' });
     }
   });
+
+  router.post('/submit-marks', verifyStudentToken, async (req, res) => {
+    const { quizId, score } = req.body;
+    const studentId = req.student.studentId; // Extracting studentId from verified token
+  
+    // Validate input
+    if (!quizId || score == null) {
+      return res.status(400).json({ message: 'Please provide quizId and score in the request body.' });
+    }
+  
+    try {
+      // Find the quiz by quizId
+      const quiz = await Quiz.findById(quizId);
+      if (!quiz) {
+        return res.status(404).json({ message: 'Quiz not found.' });
+      }
+  
+      // Check if the student is already in the quiz participants
+      if (!quiz.studentParticipants.includes(req.student._id)) {
+        // Push the studentId into studentParticipants array
+        quiz.studentParticipants.push(studentId);
+        await quiz.save(); // Save the updated quiz document
+      }
+  
+      // Find the student by studentId
+      const student = await Student.findById(studentId);
+      if (!student) {
+        return res.status(404).json({ message: 'Student not found.' });
+      }
+  
+      // Check if the quiz has already been taken by the student
+      const quizTaken = student.quizzesTaken.find(q => q.quiz.toString() === quizId);
+      if (!quizTaken) {
+        // Push the quizId and score to the student's quizzesTaken array
+        student.quizzesTaken.push({ quiz: quizId, score });
+        await student.save(); // Save the updated student document
+      } else {
+        // If the quiz is already taken, update the score
+        quizTaken.score = score;
+        await student.save(); // Save the updated score in the student document
+      }
+  
+      // Send success response
+      return res.status(200).json({
+        message: 'Quiz and marks submitted successfully!',
+        quizId,
+        studentId,
+        score,
+      });
+    } catch (error) {
+      console.error('Error submitting quiz marks:', error);
+      return res.status(500).json({ message: 'An error occurred while submitting quiz marks.' });
+    }
+  });
   
   module.exports = router;
   
