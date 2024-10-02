@@ -8,6 +8,7 @@ const jwt = require('jsonwebtoken');
 const verifyFacultyToken = require('./facutly.middleware')
 const Quiz = require('../models/quiz.models'); // Adjust the path as necessary
 const MCQQuestion = require('../models/questions.models'); // Adjust the path as necessary
+const Class = require('../models/classes.models')
 
 
 
@@ -141,8 +142,8 @@ router.get('/get-classes', verifyFacultyToken, async (req, res) => {
 });
 
 
-router.post('/create-quiz',  verifyFacultyToken , async (req, res) => {
-    const { title,  classId, startTime, endTime, scheduledDate, questions } = req.body;
+router.post('/create-quiz', verifyFacultyToken, async (req, res) => {
+    const { title, classId, startTime, endTime, scheduledDate, questions } = req.body;
 
     // Validate the input
     if (!title || !classId || !startTime || !endTime || !scheduledDate || !Array.isArray(questions) || questions.length === 0) {
@@ -190,12 +191,16 @@ router.post('/create-quiz',  verifyFacultyToken , async (req, res) => {
         // Push the quiz ID to the faculty's quizzes array
         await Faculty.findByIdAndUpdate(faculty, { $push: { quizzes: quiz._id } });
 
+        // Update the class to include the quiz ID
+        await Class.findByIdAndUpdate(classId, { $push: { quizzes: quiz._id } });
+
         return res.status(201).json({ message: 'Quiz created successfully!', quizId: quiz._id }); // Use quiz._id instead of quiz.quizId
     } catch (error) {
         console.error('Error creating quiz:', error);
         return res.status(500).json({ message: 'An error occurred while creating the quiz.' });
     }
 });
+
 
 router.get('/quizzes-by-faculty', verifyFacultyToken, async (req, res) => {
     const facultyId = req.faculty.facultyId;// Get the facultyId from the request body
