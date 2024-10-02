@@ -43,29 +43,6 @@ quizSchema.pre('save', async function (next) {
   next();
 });
 
-// Middleware to check if the quiz is still active before every save or update
-quizSchema.pre('save', function(next) {
-  const currentTime = new Date();
-  
-  // If the current time is greater than the endTime, mark the quiz as inactive
-  if (currentTime > this.endTime) {
-    this.active = false;
-  } else {
-    this.active = true;
-  }
-  
-  next();
-});
 
-// Optional: You can also add a method to manually update the active status
-quizSchema.methods.updateActiveStatus = function() {
-  const currentTime = new Date();
-  if (currentTime > this.endTime) {
-    this.active = false;
-  } else {
-    this.active = true;
-  }
-  return this.save();  // Save the updated quiz document
-};
 
 module.exports = mongoose.model('Quiz', quizSchema);
