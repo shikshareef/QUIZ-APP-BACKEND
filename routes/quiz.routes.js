@@ -3,6 +3,8 @@ const router = express.Router();
 const Quiz = require('../models/quiz.models')
 const verifyStudentToken = require('./student.middleware')
 const Student = require('../models/students.models')
+const verifyFaculty = require('./facutly.middleware')
+const Faculty = require('../models/faculty.models')
 
 router.post('/quiz-details', verifyStudentToken, async (req, res) => {
     const { quizId } = req.body; // Get the quizId from the request body
@@ -132,6 +134,41 @@ router.post('/quiz-details', verifyStudentToken, async (req, res) => {
     } catch (error) {
       console.error('Error checking quiz submission:', error);
       return res.status(500).json({ message: 'An error occurred while checking quiz submission.' });
+    }
+  });
+
+
+  router.delete('/delete-quiz', verifyFaculty, async (req, res) => {
+    const { quizId } = req.body; // Get quizId from request body
+    const facultyId = req.faculty.facultyId; // Get facultyId from middleware
+  
+    // Validate input
+    if (!quizId) {
+      return res.status(400).json({ message: 'Please provide quizId in the request body.' });
+    }
+  
+    try {
+      // Find the quiz by quizId
+      const quiz = await Quiz.findById(quizId);
+      if (!quiz) {
+        return res.status(404).json({ message: 'Quiz not found.' });
+      }
+  
+      // Delete the quiz
+      await Quiz.findByIdAndDelete(quizId);
+  
+      // Remove the quiz reference from the faculty's quizzes array
+      await Faculty.findByIdAndUpdate(facultyId, {
+        $pull: { quizzes: quizId }
+      });
+  
+      return res.status(200).json({
+        message: 'Quiz and its reference in faculty deleted successfully!',
+        quizId
+      });
+    } catch (error) {
+      console.error('Error deleting quiz or removing reference:', error);
+      return res.status(500).json({ message: 'An error occurred while deleting the quiz.' });
     }
   });
   
