@@ -96,6 +96,44 @@ router.post('/quiz-details', verifyStudentToken, async (req, res) => {
       return res.status(500).json({ message: 'An error occurred while submitting quiz marks.' });
     }
   });
+
+  router.post('/check-quiz-submission', verifyStudentToken, async (req, res) => {
+    const { quizId } = req.body;
+    const studentId = req.student.studentId; // Extracting studentId from verified token
+  
+    // Validate input
+    if (!quizId) {
+      return res.status(400).json({ message: 'Please provide quizId in the request body.' });
+    }
+  
+    try {
+      // Find the student by studentId
+      const student = await Student.findById(studentId);
+      if (!student) {
+        return res.status(404).json({ message: 'Student not found.' });
+      }
+  
+      // Check if the quizId is already present in the quizzesTaken array
+      const quizTaken = student.quizzesTaken.find(q => q.quiz.toString() === quizId);
+      if (quizTaken) {
+        // Quiz already submitted, so return an error message
+        return res.status(400).json({
+          message: 'Quiz has already been submitted.',
+          quizId,
+          score: quizTaken.score, // Optionally return the previous score
+        });
+      }
+  
+      // Quiz not yet submitted, allow submission
+      return res.status(200).json({
+        message: 'Quiz not submitted yet. Proceed with the submission.',
+        quizId,
+      });
+    } catch (error) {
+      console.error('Error checking quiz submission:', error);
+      return res.status(500).json({ message: 'An error occurred while checking quiz submission.' });
+    }
+  });
   
   module.exports = router;
   
