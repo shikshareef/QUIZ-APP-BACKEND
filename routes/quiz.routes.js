@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Quiz = require('../models/quiz.models')
 const verifyStudentToken = require('./student.middleware')
+const Student = require('../models/students.models')
 
 router.post('/quiz-details', verifyStudentToken, async (req, res) => {
     const { quizId } = req.body; // Get the quizId from the request body
