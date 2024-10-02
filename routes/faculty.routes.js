@@ -141,10 +141,7 @@ router.get('/get-classes', verifyFacultyToken, async (req, res) => {
 });
 
 
-
-
-
-router.post('/create-quiz', verifyAdmin, verifyFacultyToken, async (req, res) => {
+router.post('/create-quiz',  verifyFacultyToken, async (req, res) => {
     const { title, class: classId, startTime, endTime, scheduledDate, questions } = req.body;
 
     // Validate the input
@@ -199,6 +196,37 @@ router.post('/create-quiz', verifyAdmin, verifyFacultyToken, async (req, res) =>
         return res.status(500).json({ message: 'An error occurred while creating the quiz.' });
     }
 });
+
+router.get('/quizzes-by-faculty', verifyFacultyToken, async (req, res) => {
+    const { facultyId } = req.body; // Get the facultyId from the request body
+  
+    // Validate input
+    if (!facultyId) {
+      return res.status(400).json({ message: 'Please provide the facultyId in the request body.' });
+    }
+  
+    try {
+      // Find quizzes associated with the given facultyId
+      const quizzes = await Quiz.find({ faculty: facultyId })
+        .select('_id quizId title startTime endTime scheduledDate active'); // Select required fields
+  
+      if (quizzes.length === 0) {
+        return res.status(404).json({ message: 'No quizzes found for this faculty.' });
+      }
+  
+      // Return the quizzes details
+      return res.status(200).json({
+        message: 'Quizzes fetched successfully!',
+        quizzes,
+      });
+    } catch (error) {
+      console.error('Error fetching quizzes:', error);
+      return res.status(500).json({ message: 'An error occurred while fetching quizzes.' });
+    }
+  });
+  
+
+
 
 module.exports = router;
 
