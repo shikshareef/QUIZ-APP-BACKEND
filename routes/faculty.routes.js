@@ -141,7 +141,7 @@ router.get('/get-classes', verifyFacultyToken, async (req, res) => {
 });
 
 
-router.post('/create-quiz',  verifyFacultyToken, async (req, res) => {
+router.post('/create-quiz',  verifyFacultyToken , async (req, res) => {
     const { title, class: classId, startTime, endTime, scheduledDate, questions } = req.body;
 
     // Validate the input
@@ -198,7 +198,7 @@ router.post('/create-quiz',  verifyFacultyToken, async (req, res) => {
 });
 
 router.get('/quizzes-by-faculty', verifyFacultyToken, async (req, res) => {
-    const { facultyId } = req.body; // Get the facultyId from the request body
+    const facultyId = req.faculty.facultyId;// Get the facultyId from the request body
   
     // Validate input
     if (!facultyId) {
