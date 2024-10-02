@@ -119,7 +119,7 @@ router.post('/quiz-details', verifyStudentToken, async (req, res) => {
       const quizTaken = student.quizzesTaken.find(q => q.quiz.toString() === quizId);
       if (quizTaken) {
         // Quiz already submitted, so return an error message
-        return res.status(400).json({
+        return res.status(200).json({
           message: 'Quiz has already been submitted.',
           quizId,
           score: quizTaken.score, // Optionally return the previous score
@@ -127,7 +127,7 @@ router.post('/quiz-details', verifyStudentToken, async (req, res) => {
       }
   
       // Quiz not yet submitted, allow submission
-      return res.status(200).json({
+      return res.status(400).json({
         message: 'Quiz not submitted yet. Proceed with the submission.',
         quizId,
       });
@@ -171,6 +171,102 @@ router.post('/quiz-details', verifyStudentToken, async (req, res) => {
       return res.status(500).json({ message: 'An error occurred while deleting the quiz.' });
     }
   });
+
+  router.post('/students/quizzes-attempted', verifyStudentToken, async (req, res) => {
+    const studentId = req.student.studentId;  // Getting studentId from the middleware
+  
+    try {
+      // Fetch student document
+      const student = await Student.findById(studentId)
+        .populate({
+          path: 'quizzesTaken.quiz',  // Populate quizzes in quizzesTaken
+          populate: [
+            { path: 'faculty', select: 'name' },  // Populate faculty name
+            { path: 'class', select: 'name' }     // Populate class name
+          ]
+        });
+  
+      if (!student) {
+        return res.status(404).json({ message: 'Student not found.' });
+      }
+  
+      // Prepare the response array, checking if the quiz is valid (i.e., not null)
+      const quizzesAttempted = student.quizzesTaken
+        .filter(item => item.quiz) // Filter out null quizzes
+        .map(item => {
+          const quiz = item.quiz;
+          return {
+            quizId: quiz.quizId,
+            title: quiz.title,
+            facultyName: quiz.faculty ? quiz.faculty.name : 'Unknown Faculty',  // Check if faculty exists
+            className: quiz.class ? quiz.class.name : 'Unknown Class',  // Check if class exists
+            score: item.score
+          };
+        });
+  
+      return res.status(200).json({
+        message: 'Quizzes attempted fetched successfully!',
+        quizzes: quizzesAttempted
+      });
+  
+    } catch (error) {
+      console.error('Error fetching quizzes:', error);
+      return res.status(500).json({ message: 'An error occurred while fetching quizzes.' });
+    }
+  });
+
+  router.post('/faculty/students-participated', verifyFaculty, async (req, res) => {
+    const facultyId = req.faculty.facultyId; // Get facultyId from middleware
+    const { quizId } = req.body; // Get quizId from request body
+  
+    try {
+      // Find the faculty and ensure the quiz belongs to the faculty
+      const faculty = await Faculty.findById( facultyId ).populate('quizzes');
+      
+      if (!faculty) {
+        return res.status(404).json({ message: 'Faculty not found.' });
+      }
+  
+      // Check if the quizId belongs to one of the quizzes created by the faculty
+      const quiz = faculty.quizzes.find(quiz => quiz._id.toString() === quizId);
+      if (!quiz) {
+        return res.status(403).json({ message: 'You do not have permission to view this quiz.' });
+      }
+  
+      // Find students who have participated in this quiz
+      const students = await Student.find({
+        'quizzesTaken.quiz': quizId // Match quizzes in student's quizzesTaken array
+      }).populate('quizzesTaken.quiz', 'title'); // Populate the quiz details for better context
+  
+      // Prepare the result array with student names, regNo, quiz title, and score
+      const studentParticipation = students.map(student => {
+        // Filter quizzes taken by the student that match the quizId
+        const quizzesTakenByThisQuiz = student.quizzesTaken.filter(quizData => 
+          quizData.quiz && quizData.quiz._id.toString() === quizId  // Ensure quizData.quiz is not null
+        );
+  
+        // Return each quiz data for the student
+        return quizzesTakenByThisQuiz.map(quizData => ({
+          studentName: student.name,
+          regNo: student.regNo,
+          quizTitle: quizData.quiz ? quizData.quiz.title : 'Unknown',  // Add a fallback in case quizData.quiz is null
+          score: quizData.score
+        }));
+      }).flat(); // Flatten the array if students have taken multiple quizzes
+  
+      return res.status(200).json({
+        message: 'Student participation data fetched successfully!',
+        data: studentParticipation
+      });
+  
+    } catch (error) {
+      console.error('Error fetching student participation:', error);
+      return res.status(500).json({ message: 'An error occurred while fetching data.' });
+    }
+  });
+
+
+  
   
   module.exports = router;
   
