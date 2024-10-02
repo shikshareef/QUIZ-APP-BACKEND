@@ -5,6 +5,8 @@ const bcrypt = require('bcrypt'); // Import bcrypt for password hashing
 const verifyAdmin = require('./test.routes');
 const Organization =  require('../models/organisation.models')
 const Class = require('../models/classes.models')
+const jwt = require('jsonwebtoken')
+const verifyStudentToken = require('./student.middleware')
 
 // API to create a new student
 router.post('/register-student', verifyAdmin, async (req, res) => {
@@ -206,6 +208,147 @@ router.put('/remove-student-from-class', verifyAdmin, async (req, res) => {
     }
 });
 
+//auth routes for students 
+router.post('/login', async (req, res) => {
+    const { regNo, password } = req.body;
+  
+    // Validate input
+    if (!regNo || !password) {
+      return res.status(400).json({ message: 'Please provide both regNo and password.' });
+    }
+  
+    try {
+      // Find the student by regNo
+      const student = await Student.findOne({ regNo });
+  
+      if (!student) {
+        return res.status(401).json({ message: 'Invalid credentials.' });
+      }
+  
+      // Compare the provided password with the hashed password
+      const isMatch = await bcrypt.compare(password, student.password);
+  
+      if (!isMatch) {
+        return res.status(401).json({ message: 'Invalid credentials.' });
+      }
+  
+      // Generate JWT token
+      const token = jwt.sign(
+        { studentId: student._id, regNo: student.regNo },
+        process.env.JWT_SECRET,
+        { expiresIn: '10h' } // Token expires in 1 hour
+      );
+  
+      // Send the token and student info back to the client
+      return res.status(200).json({
+        message: 'Login successful!',
+        token,
+        student: {
+          studentId: student.studentId,
+          regNo: student.regNo,
+          name: student.name,
+          email: student.email,
+        },
+      });
+    } catch (error) {
+      console.error('Error during login:', error);
+      return res.status(500).json({ message: 'An error occurred during login.' });
+    }
+  });
+
+  router.get('/my-organizations', verifyStudentToken, async (req, res) => {
+    try {
+      const studentId = req.student.studentId; // Get studentId from the verified token and its mongodb token 
+  
+      // Find the student with the given studentId and populate organization
+      const student = await Student.findById(studentId).populate('organization');
+  
+      if (!student) {
+        return res.status(404).json({ message: 'Student not found.' });
+      }
+  
+      // Check if the organization is populated
+      const organization = student.organization; // Organization is already populated
+  
+      if (!organization) {
+        return res.status(404).json({ message: 'Organization not found.' });
+      }
+  
+      // Return the organization details
+      return res.status(200).json({
+        message: 'Organization details fetched successfully!',
+        organization,
+      });
+    } catch (error) {
+      console.error('Error fetching organization details:', error);
+      return res.status(500).json({ message: 'An error occurred while fetching organization details.' });
+    }
+  });
+
+  router.get('/my-classes', verifyStudentToken, async (req, res) => {
+    try {
+      const studentId = req.student.studentId; // Get studentId from the verified token
+  
+      // Find the student by studentId and populate the classes field
+      const student = await Student.findById(studentId).populate('classes');
+  
+      if (!student) {
+        return res.status(404).json({ message: 'Student not found.' });
+      }
+  
+      // Check if the student has any classes
+      if (!student.classes || student.classes.length === 0) {
+        return res.status(444).json({ message: 'No classes found for this student.' });
+      }
+  
+      // Return the classes details
+      return res.status(200).json({
+        message: 'Classes fetched successfully!',
+        classes: student.classes,
+      });
+    } catch (error) {
+      console.error('Error fetching classes:', error);
+      return res.status(500).json({ message: 'An error occurred while fetching classes.' });
+    }
+  });
+
+  router.get('/quizzes', verifyStudentToken, async (req, res) => {
+    const { classId } = req.body; // Get the classId from the request body
+  
+    // Validate input
+    if (!classId) {
+      return res.status(400).json({ message: 'Please provide the classId in the request body.' });
+    }
+  
+    try {
+      // Find the class by classId and populate the quizzes
+      const classData = await Class.findById(classId).populate({
+        path: 'quizzes',
+        select: '_id quizId title startTime endTime scheduledDate active', // Select required fields including _id
+      });
+  
+      if (!classData) {
+        return res.status(404).json({ message: 'Class not found.' });
+      }
+  
+      // Check if the class has quizzes
+      const quizzes = classData.quizzes; // Quizzes are already populated
+  
+      // Return the quizzes details
+      return res.status(200).json({
+        message: 'Quizzes fetched successfully!',
+        quizzes,
+      });
+    } catch (error) {
+      console.error('Error fetching quizzes:', error);
+      return res.status(500).json({ message: 'An error occurred while fetching quizzes.' });
+    }
+  });
+  
+
+
+  
+  
 
 
 

@@ -28,7 +28,7 @@ router.post('/admin/login', async (req, res) => {
         const token = jwt.sign(
             { adminId: admin.adminId, id: admin._id, secret: process.env.SECRET_ADMIN },
             process.env.JWT_SECRET, // Your secret key for signing the JWT
-            { expiresIn: '5h' } // Token expiration time
+            { expiresIn: '10h' } // Token expiration time
         );
 
         return res.status(200).json({

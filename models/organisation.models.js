@@ -1,12 +1,13 @@
 const mongoose = require('mongoose');
-const {generateCustomId} = require('./helper');
+const { generateCustomId } = require('./helper');
 
 const organizationSchema = new mongoose.Schema({
   organizationId: { type: String, unique: true },
   name: { type: String, required: true },
   admin: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
   classes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Class' }],
-  faculties: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Faculty' }] // Add this field
+  faculties: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Faculty' }],
+  students: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Student' }] // Reference to students
 }, { timestamps: true });
 
 // Pre-save hook to generate organizationId
