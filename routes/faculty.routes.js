@@ -142,7 +142,7 @@ router.get('/get-classes', verifyFacultyToken, async (req, res) => {
 
 
 router.post('/create-quiz',  verifyFacultyToken , async (req, res) => {
-    const { title, class: classId, startTime, endTime, scheduledDate, questions } = req.body;
+    const { title,  classId, startTime, endTime, scheduledDate, questions } = req.body;
 
     // Validate the input
     if (!title || !classId || !startTime || !endTime || !scheduledDate || !Array.isArray(questions) || questions.length === 0) {
