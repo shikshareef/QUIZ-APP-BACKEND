@@ -312,7 +312,7 @@ router.post('/login', async (req, res) => {
     }
   });
 
-  router.get('/quizzes', verifyStudentToken, async (req, res) => {
+  router.post('/quizzes', verifyStudentToken, async (req, res) => {
     const { classId } = req.body; // Get the classId from the request body
   
     // Validate input
