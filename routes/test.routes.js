@@ -1,6 +1,5 @@
 const Admin = require('../models/admins.models'); // Import the Admin model
 const dotenv = require('dotenv');
-
 const jwt = require('jsonwebtoken'); // JWT for token verification
 
 const verifyToken = (req, res, next) => {
