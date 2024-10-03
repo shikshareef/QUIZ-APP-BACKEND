@@ -172,7 +172,7 @@ router.post('/quiz-details', verifyStudentToken, async (req, res) => {
     }
   });
 
-  router.post('/students/quizzes-attempted', verifyStudentToken, async (req, res) => {
+  router.get('/students/quizzes-attempted', verifyStudentToken, async (req, res) => {
     const studentId = req.student.studentId;  // Getting studentId from the middleware
   
     try {
