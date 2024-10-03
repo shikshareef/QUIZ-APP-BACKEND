@@ -119,7 +119,7 @@ router.post('/quiz-details', verifyStudentToken, async (req, res) => {
       const quizTaken = student.quizzesTaken.find(q => q.quiz.toString() === quizId);
       if (quizTaken) {
         // Quiz already submitted, so return an error message
-        return res.status(200).json({
+        return res.status(400).json({
           message: 'Quiz has already been submitted.',
           quizId,
           score: quizTaken.score, // Optionally return the previous score
@@ -127,7 +127,7 @@ router.post('/quiz-details', verifyStudentToken, async (req, res) => {
       }
   
       // Quiz not yet submitted, allow submission
-      return res.status(400).json({
+      return res.status(200).json({
         message: 'Quiz not submitted yet. Proceed with the submission.',
         quizId,
       });
