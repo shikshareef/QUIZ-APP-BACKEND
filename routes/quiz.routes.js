@@ -182,8 +182,9 @@ router.post('/quiz-details', verifyStudentToken, async (req, res) => {
           path: 'quizzesTaken.quiz',  // Populate quizzes in quizzesTaken
           populate: [
             { path: 'faculty', select: 'name' },  // Populate faculty name
-            { path: 'class', select: 'name' }     // Populate class name
-          ]
+            { path: 'class', select: 'name' },    // Populate class name
+          ],
+          select: 'quizId title faculty class questions'  // Select necessary fields, including 'questions' to calculate totalMarks
         });
   
       if (!student) {
@@ -200,7 +201,8 @@ router.post('/quiz-details', verifyStudentToken, async (req, res) => {
             title: quiz.title,
             facultyName: quiz.faculty ? quiz.faculty.name : 'Unknown Faculty',  // Check if faculty exists
             className: quiz.class ? quiz.class.name : 'Unknown Class',  // Check if class exists
-            score: item.score
+            score: item.score,
+            totalMarks: quiz.questions.length // Calculate totalMarks by the number of questions
           };
         });
   
@@ -214,6 +216,7 @@ router.post('/quiz-details', verifyStudentToken, async (req, res) => {
       return res.status(500).json({ message: 'An error occurred while fetching quizzes.' });
     }
   });
+  
 
   router.post('/faculty/students-participated', verifyFaculty, async (req, res) => {
     const facultyId = req.faculty.facultyId; // Get facultyId from middleware
