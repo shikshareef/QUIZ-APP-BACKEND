@@ -218,52 +218,58 @@ router.post('/quiz-details', verifyStudentToken, async (req, res) => {
   router.post('/faculty/students-participated', verifyFaculty, async (req, res) => {
     const facultyId = req.faculty.facultyId; // Get facultyId from middleware
     const { quizId } = req.body; // Get quizId from request body
-  
+
     try {
       // Find the faculty and ensure the quiz belongs to the faculty
-      const faculty = await Faculty.findById( facultyId ).populate('quizzes');
+      const faculty = await Faculty.findById(facultyId).populate('quizzes');
       
       if (!faculty) {
         return res.status(404).json({ message: 'Faculty not found.' });
       }
-  
+
       // Check if the quizId belongs to one of the quizzes created by the faculty
       const quiz = faculty.quizzes.find(quiz => quiz._id.toString() === quizId);
       if (!quiz) {
         return res.status(403).json({ message: 'You do not have permission to view this quiz.' });
       }
-  
+
+      // Fetch quiz details to get the total number of questions (total marks)
+      const fullQuiz = await Quiz.findById(quizId).populate('questions');
+      const totalMarks = fullQuiz.questions.length; // Total marks = number of questions
+
       // Find students who have participated in this quiz
       const students = await Student.find({
         'quizzesTaken.quiz': quizId // Match quizzes in student's quizzesTaken array
       }).populate('quizzesTaken.quiz', 'title'); // Populate the quiz details for better context
-  
-      // Prepare the result array with student names, regNo, quiz title, and score
+
+      // Prepare the result array with student names, regNo, quiz title, score, and total marks
       const studentParticipation = students.map(student => {
         // Filter quizzes taken by the student that match the quizId
         const quizzesTakenByThisQuiz = student.quizzesTaken.filter(quizData => 
           quizData.quiz && quizData.quiz._id.toString() === quizId  // Ensure quizData.quiz is not null
         );
-  
+
         // Return each quiz data for the student
         return quizzesTakenByThisQuiz.map(quizData => ({
           studentName: student.name,
           regNo: student.regNo,
           quizTitle: quizData.quiz ? quizData.quiz.title : 'Unknown',  // Add a fallback in case quizData.quiz is null
-          score: quizData.score
+          score: quizData.score,
+          totalMarks // Include the total marks (length of the questions array)
         }));
       }).flat(); // Flatten the array if students have taken multiple quizzes
-  
+
       return res.status(200).json({
         message: 'Student participation data fetched successfully!',
         data: studentParticipation
       });
-  
+
     } catch (error) {
       console.error('Error fetching student participation:', error);
       return res.status(500).json({ message: 'An error occurred while fetching data.' });
     }
-  });
+});
+
 
 
   
