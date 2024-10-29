@@ -319,11 +319,20 @@ router.get('/quiz-attemptedInfo', verifyStudentToken, async (req, res) => {
       // Find the corresponding MCQQuestion to get the options
       const mcqQuestion = await MCQQuestion.findById(q.question).select('questionText options');
 
+      // Create an options object
+      const options = {
+        opt1: mcqQuestion.options.opt1,
+        opt2: mcqQuestion.options.opt2,
+        opt3: mcqQuestion.options.opt3,
+        opt4: mcqQuestion.options.opt4,
+      };
+
       return {
         questionId: mcqQuestion._id, // Get question ID
         questionText: mcqQuestion.questionText, // Get question text
-        optedAnswer: mcqQuestion.options[`opt${q.optedAnswer}`], // Get the text of the opted answer
-        correctAnswer: mcqQuestion.options[`opt${q.correctAnswer}`], // Get the text of the correct answer
+        optedAnswer: options[`opt${q.optedAnswer}`], // Get the text of the opted answer
+        correctAnswer: options[`opt${q.correctAnswer}`], // Get the text of the correct answer
+        options, // Include all options in the response
       };
     }));
 
