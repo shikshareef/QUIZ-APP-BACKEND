@@ -218,6 +218,7 @@ router.post('/submit-quiz', verifyStudentToken, async (req, res) => {
           const quiz = item.quiz;
           return {
             quizId: quiz.quizId,
+            quiz_Id : quiz._id,
             title: quiz.title,
             facultyName: quiz.faculty ? quiz.faculty.name : 'Unknown Faculty',  // Check if faculty exists
             className: quiz.class ? quiz.class.name : 'Unknown Class',  // Check if class exists
