@@ -5,99 +5,118 @@ const verifyStudentToken = require('./student.middleware')
 const Student = require('../models/students.models')
 const verifyFaculty = require('./facutly.middleware')
 const Faculty = require('../models/faculty.models')
+const QuizAttempt = require('../models/quizAttempted.models')
+const MCQQuestion = require('../models/questions.models')
 
 router.post('/quiz-details', verifyStudentToken, async (req, res) => {
-    const { quizId } = req.body; // Get the quizId from the request body
-    const studentId = req.student.studentId; // Get studentId from the verified token
-  
-    // Validate input
-    if (!quizId) {
-      return res.status(400).json({ message: 'Please provide the quizId in the request body.' });
-    }
-  
-    try {
-      // Find the quiz by quizId and populate relevant fields
-      const quiz = await Quiz.findById(quizId)
-        .populate('faculty') // Populate faculty details
-        .populate('class')   // Populate class details
-        .populate('questions'); // Populate questions
-  
-      if (!quiz) {
-        return res.status(404).json({ message: 'Quiz not found.' });
-      }
-  
-      // Fetch student details using studentId
-      const student = await Student.findById(studentId).select('studentId regNo name email'); // Fetch student details
-  
-      if (!student) {
-        return res.status(404).json({ message: 'Student not found.' });
-      }
-  
-      // Return the quiz and student details
-      return res.status(200).json({
-        message: 'Quiz details and student information fetched successfully!',
-        quiz,   // Quiz details
-        student // Student information
-      });
-    } catch (error) {
-      console.error('Error fetching quiz details:', error);
-      return res.status(500).json({ message: 'An error occurred while fetching quiz details.' });
-    }
-  });
+  const { quizId } = req.body; // Get the quizId from the request body
+  const studentId = req.student.studentId; // Get studentId from the verified token
 
-  router.post('/submit-marks', verifyStudentToken, async (req, res) => {
-    const { quizId, score } = req.body;
-    const studentId = req.student.studentId; // Extracting studentId from verified token
-  
-    // Validate input
-    if (!quizId || score == null) {
-      return res.status(400).json({ message: 'Please provide quizId and score in the request body.' });
+  // Validate input
+  if (!quizId) {
+    return res.status(400).json({ message: 'Please provide the quizId in the request body.' });
+  }
+
+  try {
+    // Find the quiz by quizId and populate relevant fields
+    const quiz = await Quiz.findById(quizId)
+      .populate('faculty') // Populate faculty details
+      .populate('class')   // Populate class details
+      .populate('questions'); // Populate questions
+
+    if (!quiz) {
+      return res.status(404).json({ message: 'Quiz not found.' });
     }
-  
-    try {
-      // Find the quiz by quizId
-      const quiz = await Quiz.findById(quizId);
-      if (!quiz) {
-        return res.status(404).json({ message: 'Quiz not found.' });
-      }
-  
-      // Check if the student is already in the quiz participants
-      if (!quiz.studentParticipants.includes(req.student._id)) {
-        // Push the studentId into studentParticipants array
-        quiz.studentParticipants.push(studentId);
-        await quiz.save(); // Save the updated quiz document
-      }
-  
-      // Find the student by studentId
-      const student = await Student.findById(studentId);
-      if (!student) {
-        return res.status(404).json({ message: 'Student not found.' });
-      }
-  
-      // Check if the quiz has already been taken by the student
-      const quizTaken = student.quizzesTaken.find(q => q.quiz.toString() === quizId);
-      if (!quizTaken) {
-        // Push the quizId and score to the student's quizzesTaken array
-        student.quizzesTaken.push({ quiz: quizId, score });
-        await student.save(); // Save the updated student document
-      } else {
-        // If the quiz is already taken, update the score
-        quizTaken.score = score;
-        await student.save(); // Save the updated score in the student document
-      }
-  
-      // Send success response
-      return res.status(200).json({
-        message: 'Quiz and marks submitted successfully!',
-        quizId,
-        studentId,
-        score,
-      });
-    } catch (error) {
-      console.error('Error submitting quiz marks:', error);
-      return res.status(500).json({ message: 'An error occurred while submitting quiz marks.' });
+
+    // Fetch student details using studentId
+    const student = await Student.findById(studentId).select('studentId regNo name email'); // Fetch student details
+
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found.' });
     }
-  });
+
+    // Return the quiz and student details
+    return res.status(200).json({
+      message: 'Quiz details and student information fetched successfully!',
+      quiz,   // Quiz details
+      student // Student information
+    });
+  } catch (error) {
+    console.error('Error fetching quiz details:', error);
+    return res.status(500).json({ message: 'An error occurred while fetching quiz details.' });
+  }
+});
+
+router.post('/submit-quiz', verifyStudentToken, async (req, res) => {
+  const { quizId, answers, score } = req.body;
+  const studentId = req.student.studentId;
+
+  // Validate input
+  if (!quizId || !answers || score == null || !Array.isArray(answers)) {
+    return res.status(400).json({ message: 'Please provide quizId, answers, and score in the correct format.' });
+  }
+
+  try {
+    // Fetch the quiz by quizId
+    const quiz = await Quiz.findById(quizId).populate('questions');
+    if (!quiz) return res.status(404).json({ message: 'Quiz not found.' });
+
+    // Check if the student is already in the quiz participants
+    if (!quiz.studentParticipants.includes(studentId)) {
+      quiz.studentParticipants.push(studentId);
+      await quiz.save();
+    }
+
+    // Fetch the student by studentId
+    const student = await Student.findById(studentId);
+    if (!student) return res.status(404).json({ message: 'Student not found.' });
+
+    // Check if the quiz has already been taken by the student
+    const quizTaken = student.quizzesTaken.find((q) => q.quiz.toString() === quizId);
+    if (!quizTaken) {
+      // Add new quiz attempt and score to quizzesTaken array
+      student.quizzesTaken.push({ quiz: quizId, score });
+      await student.save();
+    } else {
+      // Update existing score if the quiz has already been taken
+      quizTaken.score = score;
+      await student.save();
+    }
+
+    // Prepare question responses with chosen and correct answers
+    const questionResponses = quiz.questions.map((question, index) => {
+      const answerEntry = answers.find((ans) => Object.keys(ans)[0] === String(index + 1));
+      const optedAnswer = answerEntry ? answerEntry[index + 1] : '-1';
+      return {
+        question: question._id,
+        optedAnswer,
+        correctAnswer: question.correctAnswer // Assuming `correctAnswer` exists in the question model
+      };
+    });
+
+    // Create and save the quiz attempt
+    const quizAttempt = new QuizAttempt({
+      quiz: quiz._id,
+      student: studentId,
+      questions: questionResponses,
+      score
+    });
+    await quizAttempt.save();
+
+    return res.status(200).json({
+      message: 'Quiz submitted successfully!',
+      studentId : quizAttempt.student,
+      submissionId: quizAttempt._id,
+      score,
+      responses: questionResponses
+    });
+  } catch (error) {
+    console.error('Error submitting quiz:', error);
+    return res.status(500).json({ message: 'An error occurred while submitting the quiz.' });
+  }
+});
+
+
 
   router.post('/check-quiz-submission', verifyStudentToken, async (req, res) => {
     const { quizId } = req.body;
@@ -172,6 +191,7 @@ router.post('/quiz-details', verifyStudentToken, async (req, res) => {
     }
   });
 
+
   router.get('/students/quizzes-attempted', verifyStudentToken, async (req, res) => {
     const studentId = req.student.studentId;  // Getting studentId from the middleware
   
@@ -216,6 +236,8 @@ router.post('/quiz-details', verifyStudentToken, async (req, res) => {
       return res.status(500).json({ message: 'An error occurred while fetching quizzes.' });
     }
   });
+
+  
   
 
   router.post('/faculty/students-participated', verifyFaculty, async (req, res) => {
@@ -272,6 +294,52 @@ router.post('/quiz-details', verifyStudentToken, async (req, res) => {
       return res.status(500).json({ message: 'An error occurred while fetching data.' });
     }
 });
+
+router.get('/quiz-attemptedInfo', verifyStudentToken, async (req, res) => {
+  const { quizId } = req.body; // Get quizId from query parameters
+  const studentId = req.student.studentId; // Get studentId from the verified token
+
+  // Validate input
+  if (!quizId) {
+    return res.status(400).json({ message: 'Please provide the quizId in the query parameters.' });
+  }
+
+  try {
+    // Find the quiz attempt based on quizId and studentId
+    const quizAttempt = await QuizAttempt.findOne({ quiz: quizId, student: studentId })
+      .populate('questions.question'); // Populate the questions to get their texts
+
+    if (!quizAttempt) {
+      return res.status(404).json({ message: 'Quiz attempt not found.' });
+    }
+
+    // Prepare the response with question details, including options
+    const questionDetails = await Promise.all(quizAttempt.questions.map(async (q) => {
+      // Find the corresponding MCQQuestion to get the options
+      const mcqQuestion = await MCQQuestion.findById(q.question).select('questionText options');
+
+      return {
+        questionId: mcqQuestion._id, // Get question ID
+        questionText: mcqQuestion.questionText, // Get question text
+        optedAnswer: mcqQuestion.options[`opt${q.optedAnswer}`], // Get the text of the opted answer
+        correctAnswer: mcqQuestion.options[`opt${q.correctAnswer}`], // Get the text of the correct answer
+      };
+    }));
+
+    return res.status(200).json({
+      message: 'Quiz attempt details fetched successfully!',
+      quizId: quizAttempt.quiz,
+      studentId: quizAttempt.student,
+      score: quizAttempt.score,
+      questions: questionDetails // Include the details of the questions
+    });
+
+  } catch (error) {
+    console.error('Error fetching quiz attempt:', error);
+    return res.status(500).json({ message: 'An error occurred while fetching quiz attempt details.' });
+  }
+});
+
 
 
 
