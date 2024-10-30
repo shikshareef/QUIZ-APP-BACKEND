@@ -296,10 +296,9 @@ router.post('/submit-quiz', verifyStudentToken, async (req, res) => {
     }
 });
 
-router.get('/quiz-attemptedInfo', verifyStudentToken, async (req, res) => {
+router.post('/quiz-attemptedInfo', verifyStudentToken, async (req, res) => {
   const { quizId } = req.body; // Get quizId from query parameters
   const studentId = req.student.studentId; // Get studentId from the verified token
-
   // Validate input
   if (!quizId) {
     return res.status(400).json({ message: 'Please provide the quizId in the query parameters.' });

@@ -5,6 +5,7 @@ const router = express.Router();
 const verifyStudentToken = require('./student.middleware');
 const verifyFacultyToken = require('./facutly.middleware');
 const verifyAdmin = require('./test.routes');
+const verifySuperAdmin = require('./superAdmin.middleware');
 
 // Test routes
 router.post('/test-student', verifyStudentToken, (req, res) => {
@@ -17,6 +18,10 @@ router.post('/test-faculty', verifyFacultyToken, (req, res) => {
 
 router.post('/test-admin', verifyAdmin, (req, res) => {
   res.status(200).send('Admin token verified successfully!');
+});
+
+router.post('/test-superadmin', verifySuperAdmin, (req, res) => {
+  res.status(200).send('SuperAdmin token verified successfully!');
 });
 
 module.exports = router;

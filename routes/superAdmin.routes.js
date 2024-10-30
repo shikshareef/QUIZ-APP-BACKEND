@@ -92,7 +92,7 @@ router.post('/map-org-adm', verifySuperAdminToken, async (req, res) => {
     try {
         const { organizationName, adminName, adminEmail, adminPassword, secretKey } = req.body;
         const superAdminId = req.superAdmin.id; // Extracted from verifySuperAdminToken middleware
-
+        console.log(req.body)
         // Secret Key Validation
         if (secretKey !== SECRET_ADMIN) {
             return res.status(403).json({ message: 'Forbidden: Invalid secret key' });
