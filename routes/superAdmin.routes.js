@@ -8,14 +8,9 @@ const Class = require('../models/classes.models');
 const Student = require('../models/students.models');
 const SuperAdmin = require('../models/superAdmin.models')
 const jwt = require('jsonwebtoken');
-
 const verifySuperAdminToken = require('./superAdmin.middleware');
 
-router.get('/protected-route', verifySuperAdminToken, (req, res) => {
-    // Now you have access to req.superAdmin
-    console.log(req.superAdmin)
-    res.send('This is a protected route');
-});
+
 
 
 router.post('/register-superadmin', async (req, res) => {
@@ -148,6 +143,33 @@ router.post('/map-org-adm', verifySuperAdminToken, async (req, res) => {
         res.status(500).json({ message: 'Server error, please try again later' });
     }
 });
+
+router.get('/orgsandadmins', verifySuperAdminToken, async (req, res) => {
+    try {
+        // Fetch the super admin details along with organizations and corresponding admins
+        const superAdmin = await SuperAdmin.findById(req.superAdmin.id)
+            .populate({
+                path: 'organizations',
+                populate: {
+                    path: 'admin', // Populate the admin details for each organization
+                    select: 'name email', // Select only the required fields
+                },
+            });
+
+        if (!superAdmin || !superAdmin.organizations.length) {
+            return res.status(404).json({ message: 'No organizations found for this super admin' });
+        }
+
+        res.status(200).json({
+            message: 'Organizations and their admins fetched successfully',
+            organizations: superAdmin.organizations,
+        });
+    } catch (error) {
+        console.error('Error fetching organizations and admins:', error);
+        res.status(500).json({ message: 'Server error, please try again later' });
+    }
+});
+
 
 
 module.exports = router;
