@@ -2,14 +2,15 @@ const express = require('express');
 const router = express.Router();
 const Admin = require('../models/admins.models'); // Import the Admin model
 const jwt = require('jsonwebtoken'); // JWT for token generation
+const bcrypt = require('bcrypt');
  
 
 router.post('/admin/login', async (req, res) => {
-    const { adminId, secret } = req.body; // Get adminId and secret from the request body
+    const { adminId, secret ,password } = req.body; // Get adminId and secret from the request body
 
     // Validate input
-    if (!adminId || !secret) {
-        return res.status(400).json({ message: 'adminId and secret are required' });
+    if (!adminId || !secret || !password) {
+        return res.status(400).json({ message: 'adminId and secret are required password are required' });
     }
 
     try {
@@ -22,6 +23,11 @@ router.post('/admin/login', async (req, res) => {
         // Compare provided secret with SECRET_ADMIN from the .env file
         if (secret !== process.env.SECRET_ADMIN) {
             return res.status(401).json({ message: 'Invalid secret' });
+        }
+
+        const isPasswordValid = await bcrypt.compare(password, admin.password);
+        if (!isPasswordValid) {
+            return res.status(401).json({ message: 'Invalid password' });
         }
 
         // Generate a token using adminId, admin's MongoDB ID, and SECRET_ADMIN
